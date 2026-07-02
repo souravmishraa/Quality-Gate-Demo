@@ -34,7 +34,11 @@ jobs:
         with:
           node-version: 18
 
-      # Step 3 - Run ZAP Baseline Scan
+      # Step 3 - Set permissions for ZAP workspace
+      - name: Set permissions for ZAP workspace
+        run: chmod -R 777 ${{ github.workspace }}
+
+      # Step 4 - Run ZAP Baseline Scan
       - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.10.0
         continue-on-error: true
@@ -42,7 +46,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: ${{ env.TARGET_URL }}
 
-      # Step 4 - Run ZAP Full Scan
+      # Step 5 - Run ZAP Full Scan
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.8.0
         continue-on-error: true
@@ -50,7 +54,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: ${{ env.TARGET_URL }}
 
-      # Step 5 - Check generated reports
+      # Step 6 - Check generated reports
       - name: Check Reports
         run: |
           echo "Generated files:"
@@ -58,12 +62,12 @@ jobs:
           find . -name "*.html"
           find . -name "*.md"
 
-      # Step 6 - Run Quality Gate
+      # Step 7 - Run Quality Gate
       - name: Run Quality Gate
         run: |
           node scripts/quality-gate.js report_json.json
 
-      # Step 7 - Upload Reports
+      # Step 8 - Upload Reports
       - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@v4
