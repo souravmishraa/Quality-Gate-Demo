@@ -40,19 +40,21 @@ jobs:
 
       # Step 4 - Run ZAP Baseline Scan
       - name: ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.10.0
+        uses: zaproxy/action-baseline@v0.15.0
         continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: ${{ env.TARGET_URL }}
+          artifact_name: 'zap-baseline-scan'
 
       # Step 5 - Run ZAP Full Scan
       - name: ZAP Full Scan
-        uses: zaproxy/action-full-scan@v0.8.0
+        uses: zaproxy/action-full-scan@v0.13.0
         continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: ${{ env.TARGET_URL }}
+          artifact_name: 'zap-full-scan'
 
       # Step 6 - Check generated reports
       - name: Check Reports
