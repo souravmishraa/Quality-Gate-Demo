@@ -1,7 +1,7 @@
 const fs = require("fs");
 
 // Get inputs
-const report = process.argv[2];
+const report = process.argv[3];
 // process.argv = [
 //   "node",
 //   "script.js",
