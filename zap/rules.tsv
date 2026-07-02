@@ -1,0 +1,43 @@
+# ==============================
+# ZAP RULES FILE (Simple)
+# ==============================
+# This file tells ZAP:
+# - What to ignore
+# - What to warn
+# - What to fail
+
+# Format:
+# RULE_ID   ACTION
+# ACTION = IGNORE | WARN | FAIL
+
+
+# ==============================
+# IGNORE (safe / not important)
+# ==============================
+
+10036   IGNORE
+10021   IGNORE
+10063   IGNORE
+10109   IGNORE
+10049   IGNORE
+10015   IGNORE
+90033   IGNORE
+
+
+# ==============================
+# WARN (show but don't fail build)
+# ==============================
+
+10038   WARN
+10035   WARN
+10017   WARN
+
+
+# ==============================
+# FAIL (critical issues)
+# ==============================
+
+40012   FAIL
+40014   FAIL
+40018   FAIL
+90020   FAIL

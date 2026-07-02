@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔐 ZAP Security Dashboard — Juice Shop</title>
+  <meta name="description" content="OWASP ZAP DAST Security Scan Results Dashboard — Beginner Friendly" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ════════════════════════════════════════════════════════
+       ROOT DESIGN TOKENS
+       ════════════════════════════════════════════════════════ */
+    :root {
+      --bg:        #080d1a;
+      --bg-2:      #0f1629;
+      --bg-card:   #111827;
+      --bg-hover:  #1a2440;
+      --border:    #1e2d4a;
+      --border-lg: #243352;
+
+      --text:      #e2e8f0;
+      --text-2:    #94a3b8;
+      --text-3:    #4a5c7a;
+
+      --high:      #f43f5e;
+      --high-bg:   #f43f5e14;
+      --high-bd:   #f43f5e35;
+
+      --medium:    #f59e0b;
+      --medium-bg: #f59e0b14;
+      --medium-bd: #f59e0b35;
+
+      --low:       #38bdf8;
+      --low-bg:    #38bdf814;
+      --low-bd:    #38bdf835;
+
+      --info:      #64748b;
+      --info-bg:   #64748b14;
+      --info-bd:   #64748b35;
+
+      --pass:      #10b981;
+      --pass-bg:   #10b98114;
+
+      --fail:      #ef4444;
+      --fail-bg:   #ef444414;
+
+      --accent:    #6366f1;
+      --accent-2:  #818cf8;
+      --r:         14px;
+      --r-sm:      8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND ORBS ──────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 15% 20%, rgba(99,102,241,.08) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 40% at 85% 75%, rgba(16,185,129,.05) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 50% 50%, rgba(244,63,94,.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       HEADER
+       ════════════════════════════════════════════════════════ */
+    .header {
+      position: relative;
+      z-index: 1;
+      padding: 2rem 2rem 0;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #0c1527 0%, transparent 100%);
+    }
+
+    .header-inner {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .brand-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      box-shadow: 0 0 24px rgba(99,102,241,.4), 0 0 60px rgba(99,102,241,.1);
+      flex-shrink: 0;
+    }
+
+    .brand-text h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-text p {
+      font-size: 0.78rem;
+      color: var(--text-2);
+      margin-top: 0.2rem;
+    }
+
+    /* ── GATE BANNER ──────────────────────────────────────── */
+    .gate-banner {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 1rem 1.5rem;
+      border-radius: var(--r) var(--r) 0 0;
+      border: 1px solid;
+      border-bottom: none;
+      flex-wrap: wrap;
+    }
+
+    .gate-banner.pass {
+      background: var(--pass-bg);
+      border-color: #10b98135;
+    }
+
+    .gate-banner.fail {
+      background: var(--fail-bg);
+      border-color: #ef444435;
+    }
+
+    .gate-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .gate-pill.pass { color: var(--pass); }
+    .gate-pill.fail { color: var(--fail); }
+
+    .gate-desc {
+      font-size: 0.85rem;
+      color: var(--text-2);
+    }
+
+    .gate-meta {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-3);
+    }
+
+    /* ── NAV TABS ─────────────────────────────────────────── */
+    .nav-tabs {
+      display: flex;
+      gap: 0;
+      margin-top: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-tab {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-3);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+      user-select: none;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .nav-tab:hover { color: var(--text-2); }
+
+    .nav-tab.active {
+      color: var(--accent-2);
+      border-bottom-color: var(--accent-2);
+    }
+
+    /* ════════════════════════════════════════════════════════
+       MAIN CONTENT
+       ════════════════════════════════════════════════════════ */
+    .main {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── TAB PANELS ───────────────────────────────────────── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── STATS ROW ────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 1.25rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      cursor: default;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--c, var(--accent));
+      box-shadow: 0 8px 32px rgba(0,0,0,.3);
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--c, var(--accent));
+      border-radius: var(--r) var(--r) 0 0;
+    }
+
+    .stat-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--text-3);
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-number {
+      font-size: 2.6rem;
+      font-weight: 900;
+      color: var(--c, var(--text));
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── GATE TABLE CARD ──────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-2);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ── TABLE ────────────────────────────────────────────── */
+    .tbl { width: 100%; border-collapse: collapse; }
+    .tbl th {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-3);
+      font-weight: 600;
+      padding: 0.5rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .tbl td {
+      padding: 0.85rem 1rem;
+      font-size: 0.875rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl tr:hover td { background: var(--bg-hover); }
+
+    /* ── BADGES ───────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border: 1px solid;
+    }
+    .badge-pass   { color: var(--pass);   background: var(--pass-bg);   border-color: #10b98140; }
+    .badge-fail   { color: var(--fail);   background: var(--fail-bg);   border-color: #ef444440; }
+    .badge-high   { color: var(--high);   background: var(--high-bg);   border-color: var(--high-bd); }
+    .badge-medium { color: var(--medium); background: var(--medium-bg); border-color: var(--medium-bd); }
+    .badge-low    { color: var(--low);    background: var(--low-bg);    border-color: var(--low-bd); }
+    .badge-info   { color: var(--info);   background: var(--info-bg);   border-color: var(--info-bd); }
+
+    /* ── FILTER BAR ───────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .filter-btn {
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-lg);
+      background: var(--bg-2);
+      color: var(--text-2);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent-2); }
+    .filter-btn.active-all    { background: var(--accent);  border-color: var(--accent);  color: #fff; }
+    .filter-btn.active-high   { background: var(--high);    border-color: var(--high);    color: #fff; }
+    .filter-btn.active-medium { background: var(--medium);  border-color: var(--medium);  color: #fff; }
+    .filter-btn.active-low    { background: var(--low);     border-color: var(--low);     color: #000; }
+    .filter-btn.active-info   { background: var(--info);    border-color: var(--info);    color: #fff; }
+
+    /* ── ALERT CARDS ──────────────────────────────────────── */
+    .alert-card {
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--sev-color, var(--border));
+      border-radius: var(--r-sm);
+      margin-bottom: 0.6rem;
+      overflow: hidden;
+      transition: box-shadow .2s;
+    }
+
+    .alert-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.35); }
+
+    .alert-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.1rem;
+      cursor: pointer;
+      user-select: none;
+      background: var(--bg-2);
+      gap: 1rem;
+    }
+
+    .alert-head:hover { background: var(--bg-hover); }
+
+    .alert-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+      flex-wrap: wrap;
+    }
+
+    .alert-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .cwe-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      background: var(--accent)22;
+      color: var(--accent-2);
+      border: 1px solid var(--accent)40;
+      text-decoration: none;
+    }
+
+    .cwe-tag:hover { background: var(--accent)40; }
+
+    .alert-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .inst-count {
+      font-size: 0.75rem;
+      color: var(--text-3);
+    }
+
+    .chevron {
+      font-size: 0.7rem;
+      color: var(--text-3);
+      transition: transform .2s;
+    }
+
+    .chevron.open { transform: rotate(180deg); }
+
+    .alert-body {
+      padding: 1.1rem 1.25rem;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      display: none;
+    }
+
+    .alert-body.open { display: block; }
+
+    .alert-section { margin-bottom: 0.9rem; }
+    .alert-section:last-child { margin-bottom: 0; }
+
+    .alert-section h4 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-3);
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .alert-section p {
+      font-size: 0.84rem;
+      color: var(--text-2);
+      line-height: 1.65;
+    }
+
+    .code-block {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--accent-2);
+      background: var(--bg-card);
+      padding: 0.6rem 0.9rem;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border);
+      word-break: break-all;
+      display: block;
+    }
+
+    /* ── EMPTY STATE ──────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-3);
+    }
+
+    .empty-state span { font-size: 3rem; display: block; margin-bottom: 0.75rem; }
+
+    /* ── GUIDE CARDS ──────────────────────────────────────── */
+    .guide-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1rem;
+    }
+
+    .guide-card {
+      border-radius: var(--r);
+      padding: 1.25rem;
+      border: 1px solid;
+    }
+
+    .guide-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .guide-card p  { font-size: 0.82rem; color: var(--text-2); line-height: 1.6; }
+
+    .guide-card.high   { background: var(--high-bg);   border-color: var(--high-bd); }
+    .guide-card.high h3 { color: var(--high); }
+
+    .guide-card.medium { background: var(--medium-bg); border-color: var(--medium-bd); }
+    .guide-card.medium h3 { color: var(--medium); }
+
+    .guide-card.low    { background: var(--low-bg);    border-color: var(--low-bd); }
+    .guide-card.low h3 { color: var(--low); }
+
+    .guide-card.info   { background: var(--info-bg);   border-color: var(--info-bd); }
+    .guide-card.info h3 { color: var(--info); }
+
+    /* ── STEPS LIST ───────────────────────────────────────── */
+    .steps { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .step-item {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      padding: 1rem 1.25rem;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      transition: border-color .2s;
+    }
+
+    .step-item:hover { border-color: var(--accent); }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .step-content h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+
+    .step-content p {
+      font-size: 0.82rem;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+
+    .step-content code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      background: var(--bg-card);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      color: var(--accent-2);
+      border: 1px solid var(--border);
+    }
+
+    /* ── CHART BAR ────────────────────────────────────────── */
+    .chart-wrap { padding: 1.5rem 0; }
+
+    .chart-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .chart-label {
+      width: 70px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-2);
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .chart-bar-bg {
+      flex: 1;
+      height: 24px;
+      background: var(--bg-2);
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .chart-bar {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 1s cubic-bezier(.22,1,.36,1);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+    }
+
+    .chart-bar span {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: rgba(255,255,255,.9);
+    }
+
+    .chart-count {
+      width: 36px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── FOOTER ───────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-3);
+      font-size: 0.78rem;
+      border-top: 1px solid var(--border);
+      position: relative;
+      z-index: 1;
+    }
+
+    footer a { color: var(--accent-2); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── RESPONSIVE ───────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .header { padding: 1.25rem 1.25rem 0; }
+      .main { padding: 1.25rem; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .gate-banner { flex-direction: column; gap: 0.5rem; }
+      .gate-meta { margin-left: 0; }
+    }
+
+    /* ── PULSE ANIMATION ──────────────────────────────────── */
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 24px rgba(99,102,241,.4); }
+      50%       { box-shadow: 0 0 40px rgba(99,102,241,.7); }
+    }
+    .brand-icon { animation: pulse-glow 3s ease-in-out infinite; }
+
+    /* ── SCAN LINE ANIMATION ──────────────────────────────── */
+    @keyframes scan-line {
+      0%   { top: -2px; opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--c, var(--accent)), transparent);
+      animation: scan-line 4s ease-in-out infinite;
+      opacity: .3;
+    }
+
+    /* Number counter animation */
+    @keyframes countUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .stat-number { animation: countUp .5s ease both; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     HEADER
+     ════════════════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-inner">
+
+    <div class="brand">
+      <div class="brand-icon">🔐</div>
+      <div class="brand-text">
+        <h1>Security Scan Dashboard</h1>
+        <p>OWASP ZAP DAST · Target: preview.owasp-juice.shop · Beginner Friendly</p>
+      </div>
+    </div>
+
+    <!-- Gate Status Banner (status changes based on JS data) -->
+    <div class="gate-banner fail" id="gateBanner">
+      <div class="gate-pill fail" id="gatePill">❌ QUALITY GATE FAILED</div>
+      <div class="gate-desc" id="gateDesc">High-risk vulnerabilities exceed the allowed threshold. Build is blocked.</div>
+      <div class="gate-meta" id="gateMeta">Scanned: <span id="scanTime">—</span></div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab active" onclick="showTab('overview')"  id="tab-overview" >📊 Overview</button>
+      <button class="nav-tab"        onclick="showTab('findings')"  id="tab-findings" >🔍 Findings</button>
+      <button class="nav-tab"        onclick="showTab('gate')"      id="tab-gate"     >🚦 Quality Gate</button>
+      <button class="nav-tab"        onclick="showTab('howto')"     id="tab-howto"    >📚 How to Fix</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════════════
+     MAIN
+     ════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- ══ TAB: OVERVIEW ══════════════════════════════════════ -->
+  <div class="tab-panel active" id="panel-overview">
+
+    <!-- Stats Cards -->
+    <div class="stats-row">
+      <div class="stat-card" style="--c: var(--high)" id="stat-high">
+        <span class="stat-icon">🔴</span>
+        <div class="stat-label">High Severity</div>
+        <div class="stat-number" id="num-high">—</div>
+      </div>
+      <div class="stat-card" style="--c: var(--medium)" id="stat-medium">
+        <span class="stat-icon">🟡</span>
+        <div class="stat-label">Medium Severity</div>
+        <div class="stat-number" id="num-medium">—</div>
+      </div>
+      <div class="stat-card" style="--c: var(--low)" id="stat-low">
+        <span class="stat-icon">🔵</span>
+        <div class="stat-label">Low Severity</div>
+        <div class="stat-number" id="num-low">—</div>
+      </div>
+      <div class="stat-card" style="--c: var(--info)" id="stat-info">
+        <span class="stat-icon">⚪</span>
+        <div class="stat-label">Informational</div>
+        <div class="stat-number" id="num-info">—</div>
+      </div>
+    </div>
+
+    <!-- Bar Chart -->
+    <div class="card">
+      <div class="card-title">📈 Vulnerability Distribution</div>
+      <div class="chart-wrap" id="chart-container">
+        <div class="chart-row">
+          <div class="chart-label">High</div>
+          <div class="chart-bar-bg">
+            <div class="chart-bar" id="bar-high" style="width:0%; background: linear-gradient(90deg, #f43f5e, #fb7185)">
+              <span id="bar-high-lbl"></span>
+            </div>
+          </div>
+          <div class="chart-count" style="color:var(--high)" id="cnt-high">0</div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-label">Medium</div>
+          <div class="chart-bar-bg">
+            <div class="chart-bar" id="bar-medium" style="width:0%; background: linear-gradient(90deg, #f59e0b, #fbbf24)">
+              <span id="bar-medium-lbl"></span>
+            </div>
+          </div>
+          <div class="chart-count" style="color:var(--medium)" id="cnt-medium">0</div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-label">Low</div>
+          <div class="chart-bar-bg">
+            <div class="chart-bar" id="bar-low" style="width:0%; background: linear-gradient(90deg, #38bdf8, #7dd3fc)">
+              <span id="bar-low-lbl"></span>
+            </div>
+          </div>
+          <div class="chart-count" style="color:var(--low)" id="cnt-low">0</div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-label">Info</div>
+          <div class="chart-bar-bg">
+            <div class="chart-bar" id="bar-info" style="width:0%; background: linear-gradient(90deg, #64748b, #94a3b8)">
+              <span id="bar-info-lbl"></span>
+            </div>
+          </div>
+          <div class="chart-count" style="color:var(--info)" id="cnt-info">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Target Info -->
+    <div class="card">
+      <div class="card-title">🎯 Scan Information</div>
+      <table class="tbl">
+        <tr><td style="color:var(--text-3);width:160px">Target URL</td><td><code class="cwe-tag">https://preview.owasp-juice.shop/</code></td></tr>
+        <tr><td style="color:var(--text-3)">Scan Type</td><td>Baseline (Passive) + Full (Active)</td></tr>
+        <tr><td style="color:var(--text-3)">Tool</td><td>OWASP ZAP via GitHub Actions</td></tr>
+        <tr><td style="color:var(--text-3)">False Positives</td><td>Suppressed via <code class="cwe-tag">zap/rules.tsv</code></td></tr>
+        <tr><td style="color:var(--text-3)">Quality Gate</td><td>High ≤ 0 · Medium ≤ 5 · Low ≤ 20</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ TAB: FINDINGS ══════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-findings">
+    <div class="card">
+      <div class="card-title">🔍 Security Findings</div>
+
+      <!-- Filter Buttons -->
+      <div class="filter-bar">
+        <button class="filter-btn active-all" id="fb-all"    onclick="filterAlerts('all')">All</button>
+        <button class="filter-btn"            id="fb-high"   onclick="filterAlerts('high')">🔴 High</button>
+        <button class="filter-btn"            id="fb-medium" onclick="filterAlerts('medium')">🟡 Medium</button>
+        <button class="filter-btn"            id="fb-low"    onclick="filterAlerts('low')">🔵 Low</button>
+        <button class="filter-btn"            id="fb-info"   onclick="filterAlerts('info')">⚪ Info</button>
+      </div>
+
+      <!-- Alert list rendered by JS -->
+      <div id="alerts-list"></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: QUALITY GATE ══════════════════════════════════ -->
+  <div class="tab-panel" id="panel-gate">
+
+    <div class="card">
+      <div class="card-title">🚦 Quality Gate Thresholds</div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Vulnerabilities Found</th>
+            <th>Max Allowed</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody id="gate-tbody">
+          <tr><td colspan="4" style="text-align:center;color:var(--text-3)">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💡 What is a Quality Gate?</div>
+      <div class="steps">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>ZAP Scans Your Website</h4>
+            <p>GitHub Actions automatically starts OWASP ZAP when you push code. ZAP visits your website and tests for security vulnerabilities.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Results are Counted by Severity</h4>
+            <p>Each vulnerability is categorized as <strong>High</strong>, <strong>Medium</strong>, <strong>Low</strong>, or <strong>Informational</strong>.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Counts are Compared to Thresholds</h4>
+            <p>The <code>quality-gate.py</code> script checks: "Did we find more than the allowed number?" Currently: High ≤ 0, Medium ≤ 5, Low ≤ 20.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Build PASSES or FAILS</h4>
+            <p>If any threshold is exceeded → the pipeline exits with code 1 → GitHub marks the build as ❌ <strong>FAILED</strong>. Your code will NOT be deployed until you fix the issues.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚙️ How to Change Thresholds</div>
+      <p style="font-size:.85rem;color:var(--text-2);margin-bottom:1rem">Open <code class="cwe-tag">.github/workflows/zap-dast-scan.yml</code> and change these values:</p>
+      <pre class="code-block">env:
+  MAX_HIGH_ALERTS:    0   # Change to 2 to allow up to 2 HIGH findings
+  MAX_MEDIUM_ALERTS:  5   # Change to 10 to allow up to 10 MEDIUM findings
+  MAX_LOW_ALERTS:    20   # Change to 50 to allow up to 50 LOW findings</pre>
+    </div>
+  </div>
+
+  <!-- ══ TAB: HOW TO FIX ════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-howto">
+
+    <div class="card">
+      <div class="card-title">📖 Understanding Severity Levels</div>
+      <div class="guide-grid">
+        <div class="guide-card high">
+          <h3>🔴 High Severity</h3>
+          <p>Very dangerous. An attacker can exploit this to steal data, take over accounts, or damage the system.<br><br><strong>Action:</strong> Fix IMMEDIATELY before merging.</p>
+        </div>
+        <div class="guide-card medium">
+          <h3>🟡 Medium Severity</h3>
+          <p>Significant issue that could be exploited given the right conditions.<br><br><strong>Action:</strong> Fix within this sprint or current release cycle.</p>
+        </div>
+        <div class="guide-card low">
+          <h3>🔵 Low Severity</h3>
+          <p>Minor issue — harder to exploit but still worth fixing.<br><br><strong>Action:</strong> Track and fix in upcoming sprints.</p>
+        </div>
+        <div class="guide-card info">
+          <h3>⚪ Informational</h3>
+          <p>Not a vulnerability — just useful info about your app's configuration.<br><br><strong>Action:</strong> Review and decide if action is needed.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔧 Step-by-Step Fix Guide</div>
+      <div class="steps">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Download the HTML Report</h4>
+            <p>Go to GitHub → Actions → your latest workflow run → scroll to <strong>Artifacts</strong> → download <code>security-reports-run-N.zip</code>. Open <code>full-report.html</code> in your browser.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Find the HIGH Severity Findings</h4>
+            <p>In the HTML report, look for red-highlighted alerts. Each alert shows the <strong>affected URL</strong>, the <strong>attack payload</strong>, and a <strong>Solution</strong> section explaining how to fix it.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Use OWASP Resources to Learn the Fix</h4>
+            <p>Every alert has a CWE ID (e.g., CWE-89 = SQL Injection). Search <a href="https://owasp.org/Top10" target="_blank" style="color:var(--accent-2)">OWASP Top 10</a> or <a href="https://cheatsheetseries.owasp.org" target="_blank" style="color:var(--accent-2)">OWASP Cheat Sheets</a> for detailed fix guides.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Is it a False Positive? Suppress It</h4>
+            <p>If ZAP flagged something that isn't actually a vulnerability, add its rule ID to <code>zap/rules.tsv</code> with action <code>IGNORE</code>. Include a comment explaining why.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>Push Your Fix and Re-run the Pipeline</h4>
+            <p>Once you fix the issues, push to GitHub. The pipeline will automatically re-run the ZAP scan. If all thresholds are met, the build will ✅ PASS.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📚 Learning Resources</div>
+      <table class="tbl">
+        <thead><tr><th>Resource</th><th>What you'll learn</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://owasp.org/Top10" target="_blank" style="color:var(--accent-2)">OWASP Top 10</a></td><td>The 10 most critical web security risks</td></tr>
+          <tr><td><a href="https://www.zaproxy.org/docs/alerts/" target="_blank" style="color:var(--accent-2)">ZAP Alert Database</a></td><td>What each ZAP rule ID means</td></tr>
+          <tr><td><a href="https://cheatsheetseries.owasp.org" target="_blank" style="color:var(--accent-2)">OWASP Cheat Sheets</a></td><td>Quick fix guides for every vulnerability type</td></tr>
+          <tr><td><a href="https://cwe.mitre.org" target="_blank" style="color:var(--accent-2)">CWE Database</a></td><td>Detailed explanations for CWE IDs in reports</td></tr>
+          <tr><td><a href="https://www.zaproxy.org/docs/automate/github-actions/" target="_blank" style="color:var(--accent-2)">ZAP GitHub Actions Docs</a></td><td>How to configure the ZAP Actions used in this project</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p>🔐 Powered by <a href="https://www.zaproxy.org">OWASP ZAP</a> · Target: <a href="https://preview.owasp-juice.shop/">Juice Shop</a> · Beginner-Friendly Security Pipeline</p>
+</footer>
+
+<!-- ════════════════════════════════════════════════════════
+     JAVASCRIPT — Data + Interactivity
+     ════════════════════════════════════════════════════════ -->
+<script>
+  /* ─────────────────────────────────────────────────────────
+     DEMO DATA
+     In a real CI/CD run, this data comes from the ZAP JSON
+     report processed by quality-gate.py. Here we show a
+     realistic sample so you can see how the dashboard looks.
+  ───────────────────────────────────────────────────────── */
+  const SCAN_DATA = {
+    scanTime:   new Date().toLocaleString(),
+    gatePassed: false,    // ← Change to true to see PASSED state
+    counts: { High: 4, Medium: 8, Low: 14, Info: 3 },
+    gate: {
+      High:   { count: 4,  threshold: 0,  passed: false },
+      Medium: { count: 8,  threshold: 5,  passed: false },
+      Low:    { count: 14, threshold: 20, passed: true  },
+    },
+    alerts: [
+      {
+        risk: 'high', name: 'SQL Injection',
+        instances: 3, cweid: '89',
+        desc: 'SQL injection may be possible. The URL parameter appears to be passed directly to an SQL statement.',
+        solution: 'Use parameterized queries or prepared statements instead of building SQL strings by concatenating user input.',
+        url: 'https://preview.owasp-juice.shop/rest/user/login',
+      },
+      {
+        risk: 'high', name: 'Cross Site Scripting (Reflected)',
+        instances: 2, cweid: '79',
+        desc: 'Cross-site Scripting (XSS) attack was found. User-supplied input was reflected back without encoding.',
+        solution: 'Always HTML-encode user input before displaying it. Use a templating engine that auto-escapes output.',
+        url: 'https://preview.owasp-juice.shop/#/search',
+      },
+      {
+        risk: 'high', name: 'Absence of Anti-CSRF Tokens',
+        instances: 5, cweid: '352',
+        desc: 'No Anti-CSRF tokens were found in a HTML submission form. A cross-site request forgery attack is possible.',
+        solution: 'Add CSRF tokens to all forms. Most frameworks (Django, Laravel, Spring) have built-in CSRF protection.',
+        url: 'https://preview.owasp-juice.shop/#/contact',
+      },
+      {
+        risk: 'high', name: 'Path Traversal',
+        instances: 1, cweid: '22',
+        desc: 'A file path traversal attack allows reading files outside the web root. Attacker may access /etc/passwd or similar.',
+        solution: 'Validate and sanitize file paths. Use a safe path join function and check the resolved path is within an allowed base directory.',
+        url: 'https://preview.owasp-juice.shop/api/Products/',
+      },
+      {
+        risk: 'medium', name: 'Content Security Policy (CSP) Header Not Set',
+        instances: 1, cweid: '693',
+        desc: 'Content Security Policy header is missing. This could allow Cross-Site Scripting attacks.',
+        solution: "Add a Content-Security-Policy header to your HTTP responses. Start with: Content-Security-Policy: default-src 'self'",
+        url: 'https://preview.owasp-juice.shop/',
+      },
+      {
+        risk: 'medium', name: 'Missing Anti-clickjacking Header',
+        instances: 1, cweid: '1021',
+        desc: 'The X-Frame-Options header is missing or not set properly. Clickjacking attacks are possible.',
+        solution: "Add the X-Frame-Options: DENY header. Or use Content-Security-Policy: frame-ancestors 'none'",
+        url: 'https://preview.owasp-juice.shop/',
+      },
+      {
+        risk: 'medium', name: 'Vulnerable JS Library',
+        instances: 3, cweid: '829',
+        desc: 'An old version of jQuery with known vulnerabilities was detected.',
+        solution: 'Update all JavaScript dependencies to their latest stable versions. Use npm audit to identify vulnerable packages.',
+        url: 'https://preview.owasp-juice.shop/assets/public/',
+      },
+      {
+        risk: 'medium', name: 'Cookie Without Secure Flag',
+        instances: 2, cweid: '614',
+        desc: 'A cookie has been set without the secure flag. It may be accessed by attackers using a man-in-the-middle attack.',
+        solution: 'Set the Secure flag on all cookies that contain sensitive data. Example: Set-Cookie: token=abc; Secure; HttpOnly',
+        url: 'https://preview.owasp-juice.shop/rest/user/login',
+      },
+      {
+        risk: 'low', name: 'Server Leaks Information via HTTP Headers',
+        instances: 4, cweid: '200',
+        desc: 'The server leaks version information in the "Server" response header.',
+        solution: 'Configure your web server to suppress version information in headers.',
+        url: 'https://preview.owasp-juice.shop/',
+      },
+      {
+        risk: 'low', name: 'Cookie Without SameSite Attribute',
+        instances: 3, cweid: '1275',
+        desc: 'A cookie is missing the SameSite attribute, which could allow cross-site request forgery.',
+        solution: 'Add SameSite=Strict or SameSite=Lax to session cookies.',
+        url: 'https://preview.owasp-juice.shop/',
+      },
+      {
+        risk: 'info', name: 'Modern Web Application',
+        instances: 1, cweid: '',
+        desc: 'The application appears to be a modern web application using JavaScript and an SPA framework.',
+        solution: 'N/A — this is informational only.',
+        url: 'https://preview.owasp-juice.shop/',
+      },
+    ]
+  };
+
+  /* ── Init ─────────────────────────────────────────────── */
+  function init() {
+    const { scanTime, gatePassed, counts, gate, alerts } = SCAN_DATA;
+
+    // Update scan time
+    document.getElementById('scanTime').textContent = scanTime;
+
+    // Update gate banner
+    const banner = document.getElementById('gateBanner');
+    const pill   = document.getElementById('gatePill');
+    const desc   = document.getElementById('gateDesc');
+    if (gatePassed) {
+      banner.className = 'gate-banner pass';
+      pill.className   = 'gate-pill pass';
+      pill.textContent = '✅ QUALITY GATE PASSED';
+      desc.textContent = 'No thresholds exceeded. Build is safe to proceed.';
+    }
+
+    // Update stat cards
+    document.getElementById('num-high').textContent   = counts.High;
+    document.getElementById('num-medium').textContent = counts.Medium;
+    document.getElementById('num-low').textContent    = counts.Low;
+    document.getElementById('num-info').textContent   = counts.Info;
+
+    // Update bar chart
+    const total = Object.values(counts).reduce((a,b) => a+b, 0) || 1;
+    updateBar('high',   counts.High,   total);
+    updateBar('medium', counts.Medium, total);
+    updateBar('low',    counts.Low,    total);
+    updateBar('info',   counts.Info,   total);
+
+    // Render gate table
+    const tbody = document.getElementById('gate-tbody');
+    tbody.innerHTML = Object.entries(gate).map(([sev, d]) => `
+      <tr>
+        <td><span class="badge badge-${sev.toLowerCase()}">${sev}</span></td>
+        <td style="font-variant-numeric:tabular-nums">${d.count}</td>
+        <td>${d.threshold}</td>
+        <td><span class="badge ${d.passed ? 'badge-pass' : 'badge-fail'}">${d.passed ? '✅ Pass' : '❌ Fail'}</span></td>
+      </tr>`).join('');
+
+    // Render alerts
+    renderAlerts(alerts, 'all');
+  }
+
+  function updateBar(key, count, total) {
+    const pct = Math.max(count / total * 100, count > 0 ? 4 : 0);
+    const bar = document.getElementById('bar-' + key);
+    const lbl = document.getElementById('bar-' + key + '-lbl');
+    const cnt = document.getElementById('cnt-' + key);
+    setTimeout(() => { bar.style.width = pct + '%'; }, 200);
+    lbl.textContent = count > 0 ? count : '';
+    cnt.textContent = count;
+  }
+
+  /* ── Alert rendering ──────────────────────────────────── */
+  function renderAlerts(alerts, filter) {
+    const container = document.getElementById('alerts-list');
+    const filtered  = filter === 'all' ? alerts : alerts.filter(a => a.risk === filter);
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div class="empty-state"><span>✅</span>No ${filter === 'all' ? '' : filter + ' '}alerts found.</div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map((a, i) => {
+      const cwe = a.cweid
+        ? `<a href="https://cwe.mitre.org/data/definitions/${a.cweid}.html" target="_blank" class="cwe-tag">CWE-${a.cweid}</a>`
+        : '';
+      return `
+        <div class="alert-card" data-risk="${a.risk}" style="--sev-color: var(--${a.risk})">
+          <div class="alert-head" onclick="toggleAlert('ab${i}','ch${i}')">
+            <div class="alert-left">
+              <span class="badge badge-${a.risk}">${a.risk.toUpperCase()}</span>
+              <span class="alert-name">${a.name}</span>
+              ${cwe}
+            </div>
+            <div class="alert-right">
+              <span class="inst-count">📍 ${a.instances} instance(s)</span>
+              <span class="chevron" id="ch${i}">▼</span>
+            </div>
+          </div>
+          <div class="alert-body" id="ab${i}">
+            <div class="alert-section">
+              <h4>📝 Description</h4>
+              <p>${a.desc}</p>
+            </div>
+            <div class="alert-section">
+              <h4>💡 How to Fix</h4>
+              <p>${a.solution}</p>
+            </div>
+            ${a.url ? `<div class="alert-section"><h4>🌐 Example URL</h4><code class="code-block">${a.url}</code></div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Auto-expand HIGH alerts
+    filtered.forEach((a, i) => {
+      if (a.risk === 'high') {
+        document.getElementById('ab' + i)?.classList.add('open');
+        const ch = document.getElementById('ch' + i);
+        if (ch) ch.classList.add('open');
+      }
+    });
+  }
+
+  function toggleAlert(bodyId, chevronId) {
+    const body    = document.getElementById(bodyId);
+    const chevron = document.getElementById(chevronId);
+    body?.classList.toggle('open');
+    chevron?.classList.toggle('open');
+  }
+
+  /* ── Tab switching ────────────────────────────────────── */
+  function showTab(name) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  /* ── Alert filtering ──────────────────────────────────── */
+  function filterAlerts(severity) {
+    const btns = { all: 'fb-all', high: 'fb-high', medium: 'fb-medium', low: 'fb-low', info: 'fb-info' };
+
+    // Reset all buttons
+    Object.values(btns).forEach(id => {
+      const el = document.getElementById(id);
+      el.className = 'filter-btn';
+    });
+
+    // Set active class
+    document.getElementById(btns[severity]).classList.add('active-' + severity);
+
+    renderAlerts(SCAN_DATA.alerts, severity);
+  }
+
+  // Start everything when page loads
+  init();
+</script>
+</body>
+</html>

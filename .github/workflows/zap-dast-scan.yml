@@ -1,0 +1,90 @@
+name: "OWASP ZAP Security Scan (Node.js Quality Gate)"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  TARGET_URL: "https://preview.owasp-juice.shop/"
+  MAX_HIGH: 0
+  MAX_MEDIUM: 5
+  MAX_LOW: 20
+
+jobs:
+  zap-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # 1. Get code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Create report folder
+      - name: Create Folder
+        run: mkdir zap-reports
+
+      # 3. ZAP Basic Scan
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        continue-on-error: true
+        with:
+          target: ${{ env.TARGET_URL }}
+          report_json: zap-reports/baseline.json
+          report_html: zap-reports/baseline.html
+
+      # 4. ZAP Full Scan
+      - name: ZAP Full Scan
+        uses: zaproxy/action-full-scan@v0.10.0
+        continue-on-error: true
+        with:
+          target: ${{ env.TARGET_URL }}
+          report_json: zap-reports/full.json
+          report_html: zap-reports/full.html
+
+      # 5. Setup Node.js
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      # 6. Run Quality Gate (JS script)
+      - name: Run Quality Gate
+        run: |
+          node scripts/quality-gate.js \
+            --report zap-reports/full.json \
+            --max-high $MAX_HIGH \
+            --max-medium $MAX_MEDIUM \
+            --max-low $MAX_LOW \
+            --output zap-reports/result.json
+
+      # 7. Upload reports
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-reports
+          path: zap-reports/
+
+      # 8. Final decision
+      - name: Gate Check
+        run: |
+          FILE=zap-reports/result.json
+
+          if [ ! -f "$FILE" ]; then
+            echo "Missing result file"
+            exit 1
+          fi
+
+          PASS=$(node -e "console.log(require('./zap-reports/result.json').gate_passed)")
+
+          if [ "$PASS" = "true" ]; then
+            echo "PASS - Safe build"
+            exit 0
+          else
+            echo "FAIL - Security issues found"
+            exit 1
+          fi
