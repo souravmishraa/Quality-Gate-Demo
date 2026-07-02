@@ -88,7 +88,7 @@
 #             echo "FAIL - Security issues found"
 #             exit 1
 #           fi
-name: "OWASP ZAP Security Scan (Node.js Quality Gate)"
+nname: "OWASP ZAP Security Scan"
 
 on:
   push:
@@ -97,17 +97,11 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# GitHub Actions permissions
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
 
 env:
   TARGET_URL: "https://preview.owasp-juice.shop/"
-  MAX_HIGH: 0
-  MAX_MEDIUM: 5
-  MAX_LOW: 20
 
 jobs:
   zap-scan:
@@ -115,13 +109,15 @@ jobs:
 
     steps:
 
-      # Step 1 - Download project
+      # Step 1 - Download the project
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2 - Create report folder
-      - name: Create Folder
-        run: mkdir -p zap-reports
+      # Step 2 - Install Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
       # Step 3 - Run ZAP Baseline Scan
       - name: ZAP Baseline Scan
@@ -130,8 +126,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: ${{ env.TARGET_URL }}
-          report_json: zap-reports/baseline.json
-          report_html: zap-reports/baseline.html
 
       # Step 4 - Run ZAP Full Scan
       - name: ZAP Full Scan
@@ -140,24 +134,27 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: ${{ env.TARGET_URL }}
-          report_json: zap-reports/full.json
-          report_html: zap-reports/full.html
 
-      # Step 5 - Install Node.js
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
+      # Step 5 - Check generated files
+      - name: Check Reports
+        run: |
+          echo "Generated Files:"
+          find . -name "*.json"
+          find . -name "*.html"
+          find . -name "*.md"
 
       # Step 6 - Run Quality Gate
       - name: Run Quality Gate
         run: |
-          node scripts/quality-gate.js zap-reports/full.json
+          node scripts/quality-gate.js report_json.json
 
       # Step 7 - Upload Reports
       - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: zap-reports
-          path: zap-reports/
+          name: security-reports
+          path: |
+            report_json.json
+            report_html.html
+            report_md.md
