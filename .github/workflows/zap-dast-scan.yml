@@ -88,7 +88,7 @@
 #             echo "FAIL - Security issues found"
 #             exit 1
 #           fi
-nname: "OWASP ZAP Security Scan"
+name: "OWASP ZAP Security Scan"
 
 on:
   push:
