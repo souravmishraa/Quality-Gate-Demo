@@ -119,23 +119,35 @@ jobs:
         with:
           node-version: 18
 
-      # Step 3 - Run ZAP Baseline Scan
+      # # Step 3 - Run ZAP Baseline Scan
+      # - name: ZAP Baseline Scan
+      # - uses: zaproxy/action-baseline@v0.11.0
+      #   # uses: zaproxy/action-baseline@v0.12.0
+      #   continue-on-error: true
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     target: ${{ env.TARGET_URL }}
+# Step 3 - Run ZAP Baseline Scan
       - name: ZAP Baseline Scan
-      - uses: zaproxy/action-baseline@v0.11.0
-        # uses: zaproxy/action-baseline@v0.12.0
+        uses: zaproxy/action-baseline@v0.11.0
         continue-on-error: true
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          target: ${{ env.TARGET_URL }}
-
+        token: ${{ secrets.GITHUB_TOKEN }}
+        target: ${{ env.TARGET_URL }}
       # Step 4 - Run ZAP Full Scan
+      # - name: ZAP Full Scan
+      #   uses: zaproxy/action-full-scan@v0.10.0
+      #   continue-on-error: true
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     target: ${{ env.TARGET_URL }}
+# Step 4 - Run ZAP Full Scan
       - name: ZAP Full Scan
-        uses: zaproxy/action-full-scan@v0.10.0
+        uses: zaproxy/action-full-scan@v0.9.0
         continue-on-error: true
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          target: ${{ env.TARGET_URL }}
-
+        token: ${{ secrets.GITHUB_TOKEN }}
+        target: ${{ env.TARGET_URL }}
       # Step 5 - Check generated files
       - name: Check Reports
         run: |
